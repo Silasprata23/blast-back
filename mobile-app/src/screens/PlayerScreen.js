@@ -1,27 +1,170 @@
-import React, { useRef } from 'react';
-import { ActivityIndicator, Platform, Pressable, SafeAreaView, StatusBar, Text, View } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { TouchControls } from '../components/TouchControls';
-import { embed } from '../constants/catalog';
-import { styles } from '../styles/styles';
-export function PlayerScreen({selectedGame,saveGame,navigate,width,height}) {
-  const webRef = useRef(null);
-  const sendKey = (key,down) => {
-    const codeMap={ArrowUp:38,ArrowDown:40,ArrowLeft:37,ArrowRight:39,z:90,x:88,Enter:13,Shift:16,'5':53,'1':49};
-    const code=codeMap[key]||key.charCodeAt(0);
-    const script=`(function(){try{var t=document;var e=new KeyboardEvent('${down?'keydown':'keyup'}',{key:${JSON.stringify(key)},code:${JSON.stringify(key==='Enter'?'Enter':key==='Shift'?'ShiftLeft':key.length===1?'Key'+key.toUpperCase():key)},keyCode:${code},which:${code},bubbles:true,cancelable:true});t.dispatchEvent(e);window.dispatchEvent(e);var f=document.querySelector('iframe');if(f){try{f.contentWindow.dispatchEvent(new KeyboardEvent('${down?'keydown':'keyup'}',{key:${JSON.stringify(key)},keyCode:${code},which:${code},bubbles:true}));}catch(_){}}}catch(e){} })();true;`;
-    webRef.current?.injectJavaScript(script);
-  };
+import React, { useEffect, useRef, useState } from "react";
+import {
+	ActivityIndicator,
+	Platform,
+	Pressable,
+	StatusBar,
+	Text,
+	View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
+import { TouchControls } from "../components/TouchControls";
+import {
+	CONTROL_PROFILES,
+	PROFILE_IDS,
+	chooseControlProfile,
+} from "../constants/controlProfiles";
+import { embed } from "../constants/catalog";
+import { getItem } from "../services/archiveService";
+import { makeKeyboardScript } from "../services/keyboardBridge";
+import { styles } from "../styles/styles";
 
-  return <SafeAreaView style={styles.container}>
-    <StatusBar barStyle="light-content"/>
-    <View style={styles.playerTop}>
-      <Pressable onPress={() => navigate('detail')}><Text style={styles.navActive}>‹ Voltar</Text></Pressable>
-      <Text numberOfLines={1} style={styles.playerTitle}>{selectedGame.title||selectedGame.identifier}</Text>
-      <Pressable onPress={saveGame} style={styles.saveButton}><Text style={styles.saveText}>Salvar</Text></Pressable>
-    </View>
-    <View style={styles.webWrap}><WebView ref={webRef} source={{uri:embed(selectedGame.identifier)}} javaScriptEnabled domStorageEnabled allowsFullscreenVideo allowsInlineMediaPlayback mediaPlaybackRequiresUserAction={false} originWhitelist={['*']} style={styles.webview} startInLoadingState renderLoading={()=><ActivityIndicator color="#55f2d0" size="large"/>}/></View>
-    <View style={styles.playerHint}><Text style={styles.muted}>Os controles abaixo enviam comandos de teclado ao emulador. O suporte varia conforme o jogo.</Text></View>
-    {Platform.OS!=='web' && <TouchControls sendKey={sendKey} width={width} height={height}/>}
-  </SafeAreaView>;
+export function PlayerScreen({
+	selectedGame,
+	saveGame,
+	navigate,
+	width,
+	height,
+	detail,
+}) {
+	const [emulatorInfo, setEmulatorInfo] = useState({
+		status: "loading",
+		emulator: null,
+		collection: [],
+	});
+	const [manualProfile, setManualProfile] = useState(null);
+	const [webReady, setWebReady] = useState(false);
+	const webRef = useRef(null);
+	const id = selectedGame?.identifier;
+
+	useEffect(() => {
+		setManualProfile(null);
+		setWebReady(false);
+	}, [id]);
+	useEffect(() => {
+		let active = true;
+		if (!id) return undefined;
+		if (detail?.identifier === id && detail?.emulator) {
+			setEmulatorInfo({
+				status: "ready",
+				emulator: detail.emulator,
+				collection: detail.collection || [],
+			});
+			return undefined;
+		}
+		setEmulatorInfo({ status: "loading", emulator: null, collection: [] });
+		getItem(id)
+			.then((item) => {
+				if (active)
+					setEmulatorInfo({
+						status: "ready",
+						emulator: item.emulator,
+						collection: item.collection || [],
+					});
+			})
+			.catch((error) => {
+				if (active)
+					setEmulatorInfo({
+						status: "error",
+						emulator: null,
+						collection: [],
+						error: error.message,
+					});
+			});
+		return () => {
+			active = false;
+		};
+	}, [id, detail]);
+
+	const detected = chooseControlProfile(
+		emulatorInfo.emulator,
+		emulatorInfo.collection,
+	);
+	const profileId = manualProfile || detected.id;
+	const profile = CONTROL_PROFILES[profileId];
+	const sendKey = (key, down) => {
+		if (!webReady || !key) return;
+		webRef.current?.injectJavaScript(makeKeyboardScript(key, down));
+	};
+
+	return (
+		<SafeAreaView style={styles.container}>
+			<StatusBar barStyle="light-content" />
+			<View style={styles.playerTop}>
+				<Pressable onPress={() => navigate("detail")}>
+					<Text style={styles.navActive}>‹ Voltar</Text>
+				</Pressable>
+				<Text numberOfLines={1} style={styles.playerTitle}>
+					{selectedGame.title || selectedGame.identifier}
+				</Text>
+				<Pressable onPress={saveGame} style={styles.saveButton}>
+					<Text style={styles.saveText}>Salvar</Text>
+				</Pressable>
+			</View>
+			<View style={styles.webWrap}>
+				<WebView
+					ref={webRef}
+					source={{ uri: embed(id) }}
+					javaScriptEnabled
+					domStorageEnabled
+					allowsFullscreenVideo
+					allowsInlineMediaPlayback
+					mediaPlaybackRequiresUserAction={false}
+					originWhitelist={["*"]}
+					style={styles.webview}
+					startInLoadingState
+					onLoadStart={() => setWebReady(false)}
+					onLoadEnd={() => setWebReady(true)}
+					renderLoading={() => (
+						<ActivityIndicator color="#55f2d0" size="large" />
+					)}
+				/>
+			</View>
+			<View style={styles.playerHint}>
+				<Text style={styles.emulatorLabel} accessibilityRole="text">
+					{emulatorInfo.status === "loading"
+						? "Emulador: identificando..."
+						: emulatorInfo.status === "error"
+							? "Emulador: consulta indisponível"
+							: `Emulador: ${emulatorInfo.emulator?.name || "Não informado"}`}
+				</Text>
+				<Text style={styles.muted}>
+					Perfil: {profile.label} —{" "}
+					{manualProfile ? "selecionado manualmente" : detected.reason}
+				</Text>
+				<View style={styles.profileRow}>
+					{PROFILE_IDS.map((p) => (
+						<Pressable
+							accessibilityRole="button"
+							accessibilityState={{ selected: profileId === p }}
+							key={p}
+							onPress={() => setManualProfile(p)}
+							style={[
+								styles.profileChip,
+								profileId === p && styles.profileChipActive,
+							]}
+						>
+							<Text style={styles.profileChipText}>
+								{CONTROL_PROFILES[p].label}
+							</Text>
+						</Pressable>
+					))}
+				</View>
+
+				<Text style={styles.muted}>
+					Se o jogo não responder, toque na área do jogo e teste outro perfil.
+					Iframes externos podem bloquear teclas simuladas.
+				</Text>
+			</View>
+			{Platform.OS !== "web" && (
+				<TouchControls
+					sendKey={sendKey}
+					keys={profile.keys}
+					width={width}
+					height={height}
+				/>
+			)}
+		</SafeAreaView>
+	);
 }
