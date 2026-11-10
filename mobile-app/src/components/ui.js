@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { colors, fonts, styles as s } from '../theme';
+import { colors, fontFamily, fonts, styles as s } from '../theme';
 import { thumb } from '../services/archive.mjs';
 
-export function Copy({ children, style, ...props }) { return <Text {...props} style={[s.body, style]}>{children}</Text>; }
-export function Heading({ children, size = 36, style }) { return <Text accessibilityRole="header" style={[s.heading, { fontSize: size, lineHeight: Math.round(size * 1.1) }, style]}>{children}</Text>; }
+export function Copy({ children, style, ...props }) { return <Text {...props} style={[s.body, { fontFamily: fontFamily(fonts.body) }, style]}>{children}</Text>; }
+export function Heading({ children, size = 36, style }) { return <Text accessibilityRole="header" style={[s.heading, { fontFamily: fontFamily(fonts.heading), fontSize: size, lineHeight: Math.round(size * 1.1) }, style]}>{children}</Text>; }
 export function Button({ children, onPress, secondary = false, disabled = false, loading = false, style, accessibilityRole = 'button', accessibilityState, ...props }) {
   return <Pressable {...props} accessibilityRole={accessibilityRole} accessibilityState={{ ...accessibilityState, disabled: disabled || loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [u.button, secondary && u.secondary, (pressed || disabled || loading) && { opacity: 0.65 }, style]}>
     {loading ? <ActivityIndicator color={secondary ? colors.ink : colors.bg} /> : <Copy style={[u.buttonLabel, { color: secondary ? colors.ink : colors.bg }]}>{children}</Copy>}
@@ -19,7 +19,7 @@ export function GameCard({ game, width, onPress, onRemove }) {
   return <View style={{ width, gap: 8 }}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${game.title}`} onPress={() => onPress(game)} style={({ pressed }) => ({ gap: 8, opacity: pressed ? 0.7 : 1 })}>
       <GameImage game={game} style={{ width: '100%', aspectRatio: 163 / 114 }} />
-      <Text numberOfLines={2} style={u.gameTitle}>{game.title}</Text>
+      <Text numberOfLines={2} style={[u.gameTitle, { fontFamily: fontFamily(fonts.heading) }]}>{game.title}</Text>
       <Copy numberOfLines={2} style={s.caption}>{[game.year || 'Ano não informado', game.creator].filter(Boolean).join(' · ')}</Copy>
     </Pressable>
     {onRemove && <Pressable accessibilityRole="button" accessibilityLabel={`Remover ${game.title} dos salvos`} onPress={() => onRemove(game)} style={u.remove}><Copy style={{ color: colors.accent, fontSize: 12 }}>REMOVER DOS SALVOS</Copy></Pressable>}
@@ -44,6 +44,6 @@ export function Panel({ title, children }) { return <View style={s.panel}><Headi
 const u = StyleSheet.create({
   button: { backgroundColor: colors.accent, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
   secondary: { backgroundColor: colors.surface }, buttonLabel: { textAlign: 'center', fontSize: 14, lineHeight: 20 },
-  gameTitle: { fontFamily: fonts.heading, fontSize: 23, lineHeight: 26, color: colors.ink },
+  gameTitle: { fontSize: 23, lineHeight: 26, color: colors.ink },
   fallback: { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 4 }, remove: { minHeight: 44, justifyContent: 'center' },
 });

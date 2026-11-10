@@ -1,3 +1,6 @@
+import { detectEmulator } from './emulatorService.mjs';
+
+const PAGE_SIZE = 24;
 export const API = 'https://archive.org';
 export const SYSTEMS = [
   { id: 'internetarcade', label: 'Arcade' },
@@ -19,7 +22,7 @@ const list = value => value == null ? [] : Array.isArray(value) ? value : [value
 export function clean(value) {
   return String(first(value) ?? '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
 }
-export function buildSearchUrl({ collection, query = '', sort = 'downloads', page = 1, rows = 24 } = {}) {
+export function buildSearchUrl({ collection, query = '', sort = 'downloads', page = 1, rows = PAGE_SIZE } = {}) {
   const validCollection = SYSTEMS.find(s => s.id === collection);
   const collections = validCollection ? `collection:${validCollection.id}` : `(${SYSTEMS.map(s => `collection:${s.id}`).join(' OR ')})`;
   // Quoted tokens prevent user text from becoming Archive query operators.
@@ -53,15 +56,19 @@ export async function requestJson(url, { signal, fetcher = fetch, timeout = 2000
 export async function searchGames(options = {}, requestOptions) {
   const data = await requestJson(buildSearchUrl(options), requestOptions);
   if (!Array.isArray(data?.response?.docs)) throw new Error('O acervo enviou uma lista inválida. Tente novamente.');
-  const games = data.response.docs.filter(g => typeof g.identifier === 'string').map(g => ({
+  const games = data.response.docs.filter(g => typeof g?.identifier === 'string' && g.identifier.trim()).map(g => ({
     identifier: g.identifier, title: clean(g.title) || g.identifier,
     year: clean(g.year), creator: clean(g.creator), downloads: Number(g.downloads) || 0,
   }));
-  return { games, total: Number(data.response.numFound) || 0, page: options.page || 1 };
+  const page = options.page ?? 1;
+  const rows = options.rows ?? PAGE_SIZE;
+  const total = Number(data.response.numFound) || 0;
+  const hasMore = data.response.docs.length >= rows && page * rows < total;
+  return { games, total, page, hasMore };
 }
 export async function getItem(id, requestOptions) {
   const data = await requestJson(`${API}/metadata/${encodeURIComponent(id)}`, requestOptions);
   if (!data?.metadata || !Object.keys(data.metadata).length) throw new Error('Este jogo não está disponível no acervo.');
   const m = data.metadata;
-  return { identifier: id, title: clean(m.title) || id, description: clean(m.description), year: clean(m.year || m.date), creator: clean(m.creator), subjects: list(m.subject).flatMap(s => String(s).split(';')).map(clean).filter(Boolean).slice(0, 8) };
+  return { emulator: detectEmulator(m), collection: list(m.collection), identifier: id, title: clean(m.title) || id, description: clean(m.description), year: clean(m.year || m.date), creator: clean(m.creator), subjects: list(m.subject).flatMap(s => String(s).split(';')).map(clean).filter(Boolean).slice(0, 8) };
 }

@@ -1,24 +1,36 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LAST_KEY, SAVED_KEY, parseGames, parseSession } from '../services/storage.mjs';
+import { LAST_KEY, SAVED_KEY, createFavoritesQueue, parseSession } from '../services/storage.mjs';
 
 export function useLibrary() {
   const [saved, setSaved] = useState([]), [last, setLast] = useState(null), [ready, setReady] = useState(false), [error, setError] = useState(''), [revision, setRevision] = useState(0);
-  const current = useRef([]), queue = useRef(Promise.resolve());
+  const [favorites] = useState(() => createFavoritesQueue(
+    value => AsyncStorage.setItem(SAVED_KEY, value),
+    setSaved,
+  ));
   useEffect(() => {
-    let live = true; setReady(false); setError('');
-    Promise.all([AsyncStorage.getItem(SAVED_KEY), AsyncStorage.getItem(LAST_KEY), AsyncStorage.getItem('@blastback/saves')]).then(([raw, session, legacy]) => {
-      if (!live) return;
-      current.current = parseGames(raw ?? legacy); setSaved(current.current); setLast(parseSession(session)); setReady(true);
-    }).catch(() => { if (live) setError('Não foi possível ler seus salvos neste dispositivo. Tente novamente.'); });
+    let live = true;
+    setReady(false);
+    setError('');
+    async function restore() {
+      await favorites.restore(async () =>
+        (await AsyncStorage.getItem(SAVED_KEY)) ?? await AsyncStorage.getItem('@blastback/saves')
+      );
+      const session = await AsyncStorage.getItem(LAST_KEY);
+      if (live) {
+        setLast(parseSession(session));
+        setReady(true);
+      }
+    }
+    restore().catch(() => {
+      if (live) setError('Não foi possível ler seus salvos neste dispositivo. Tente novamente.');
+    });
     return () => { live = false; };
-  }, [revision]);
-  function toggle(game) {
+  }, [favorites, revision]);
+  function toggle(game, saveOnly = false) {
     if (!ready) return;
-    const next = current.current.some(g => g.identifier === game.identifier) ? current.current.filter(g => g.identifier !== game.identifier) : [{ ...game, savedAt: new Date().toISOString() }, ...current.current];
-    const previous = current.current; current.current = next; setSaved(next); setError('');
-    queue.current = queue.current.then(() => AsyncStorage.setItem(SAVED_KEY, JSON.stringify(next))).catch(() => {
-      if (current.current === next) { current.current = previous; setSaved(previous); }
+    setError('');
+    favorites.update(game, saveOnly).catch(() => {
       setError('Não foi possível salvar a lista. Verifique o armazenamento do dispositivo.');
     });
   }

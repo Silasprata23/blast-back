@@ -16,7 +16,7 @@ import {
 	chooseControlProfile,
 } from "../constants/controlProfiles";
 import { embed } from "../constants/catalog";
-import { getItem } from "../services/archiveService";
+import { getItem } from "../services/archive.mjs";
 import { makeKeyboardScript } from "../services/keyboardBridge";
 import { styles } from "../styles/styles";
 
@@ -45,7 +45,7 @@ export function PlayerScreen({
 	useEffect(() => {
 		let active = true;
 		if (!id) return undefined;
-		if (detail?.identifier === id && detail?.emulator) {
+		if (detail?.identifier === id && Array.isArray(detail.collection)) {
 			setEmulatorInfo({
 				status: "ready",
 				emulator: detail.emulator,

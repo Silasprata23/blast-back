@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Keyboard, TextInput, View } from 'react-native';
 import { Button, Copy, GameList, Heading } from '../components/ui';
-import { colors, fonts, styles as s } from '../theme';
+import { colors, fontFamily, fonts, styles as s } from '../theme';
 import { SORTS } from '../services/archive.mjs';
 import { useGames } from '../hooks/useGames';
 
@@ -22,7 +22,7 @@ export default function Catalog({ mode, filters, query, setQuery, navigate, libr
       <Heading size={28}>POPULARES NO ARCADE</Heading>
     </> : isSearch ? <>
       <Heading>{'QUAL É O\nSEU CLÁSSICO?'}</Heading>
-      <TextInput accessibilityLabel="Nome do jogo" value={draft} onChangeText={setDraft} placeholder="Buscar pelo nome do jogo" placeholderTextColor={colors.muted} returnKeyType="search" autoCapitalize="none" autoCorrect={false} onSubmitEditing={submit} style={{ minHeight: 52, padding: 14, backgroundColor: colors.surface, color: colors.ink, fontFamily: fonts.body, fontSize: 14 }} />
+      <TextInput accessibilityLabel="Nome do jogo" value={draft} onChangeText={setDraft} placeholder="Buscar pelo nome do jogo" placeholderTextColor={colors.muted} returnKeyType="search" autoCapitalize="none" autoCorrect={false} onSubmitEditing={submit} style={{ minHeight: 52, padding: 14, backgroundColor: colors.surface, color: colors.ink, fontFamily: fontFamily(fonts.body), fontSize: 14 }} />
       <Button onPress={submit}>BUSCAR JOGOS</Button>
       <Button secondary onPress={() => navigate('filters', { origin: 'search' })}>ORDEM: {sortLabel.toLocaleUpperCase('pt-BR')}{filters.collection ? ' · FILTRADO' : ''}</Button>
       <Copy style={s.caption}>{query ? `RESULTADOS PARA “${query.toLocaleUpperCase('pt-BR')}”` : 'EXPLORE O ACERVO OU PESQUISE UM NOME'}</Copy>

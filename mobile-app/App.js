@@ -3,7 +3,6 @@ import { ActivityIndicator, BackHandler, StatusBar, View, useWindowDimensions } 
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Shell from './src/components/Shell';
-import { Copy } from './src/components/ui';
 import Catalog from './src/screens/Catalog';
 import Systems from './src/screens/Systems';
 import Filters from './src/screens/Filters';
@@ -36,6 +35,6 @@ export default function App() {
   else if (route.name === 'filters') screen = <Filters value={filters} apply={setFilters} back={back} origin={route.params.origin} />;
   else if (route.name === 'detail') screen = <Detail key={route.params.game.identifier} game={route.params.game} navigate={navigate} library={library} />;
   else if (route.name === 'saved') screen = <Saved library={library} navigate={navigate} />;
-  else if (route.name === 'player') return <SafeAreaProvider><PlayerScreen selectedGame={route.params.game} detail={route.params.game} saveGame={() => { if (!library.isSaved(route.params.game.identifier)) library.toggle(route.params.game); }} navigate={() => stack.length > 1 ? back() : navigate('home', {}, true)} width={width} height={height} /></SafeAreaProvider>;
-  return <SafeAreaProvider><StatusBar barStyle="light-content" backgroundColor={colors.bg} /><Shell route={route} navigate={navigate} back={back} canGoBack={stack.length > 1}>{fontError ? <Copy style={{ padding: 24 }}>Não foi possível carregar as fontes do aplicativo.</Copy> : screen}</Shell></SafeAreaProvider>;
+  else if (route.name === 'player') return <SafeAreaProvider><PlayerScreen selectedGame={route.params.game} detail={route.params.game} saveGame={() => library.toggle(route.params.game, true)} navigate={() => stack.length > 1 ? back() : navigate('home', {}, true)} width={width} height={height} /></SafeAreaProvider>;
+  return <SafeAreaProvider><StatusBar barStyle="light-content" backgroundColor={colors.bg} /><Shell route={route} navigate={navigate} back={back} canGoBack={stack.length > 1}>{screen}</Shell></SafeAreaProvider>;
 }
