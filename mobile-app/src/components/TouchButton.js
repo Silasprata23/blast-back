@@ -20,7 +20,7 @@ export function TouchButton({
 					width: small ? 76 : size,
 					height: small ? 42 : size,
 					borderRadius: small ? 10 : Math.max(12, size * 0.25),
-					backgroundColor: accent ? "#a82f70" : "#183b49",
+					backgroundColor: accent ? "#9f3e2f" : "#414638",
 					opacity: pressed ? 0.65 : 1,
 				},
 			]}

@@ -103,6 +103,9 @@ export function PlayerScreen({
 				</Pressable>
 			</View>
 			<View style={styles.webWrap}>
+				{Platform.OS === "web" ? (
+					<iframe title={selectedGame.title || id} src={embed(id)} allowFullScreen style={{ width: "100%", height: "100%", border: 0 }} />
+				) : (
 				<WebView
 					ref={webRef}
 					source={{ uri: embed(id) }}
@@ -111,15 +114,16 @@ export function PlayerScreen({
 					allowsFullscreenVideo
 					allowsInlineMediaPlayback
 					mediaPlaybackRequiresUserAction={false}
-					originWhitelist={["*"]}
+					originWhitelist={["https://*"]}
 					style={styles.webview}
 					startInLoadingState
 					onLoadStart={() => setWebReady(false)}
 					onLoadEnd={() => setWebReady(true)}
 					renderLoading={() => (
-						<ActivityIndicator color="#55f2d0" size="large" />
+						<ActivityIndicator color="#C1CB8D" size="large" />
 					)}
 				/>
+				)}
 			</View>
 			<View style={styles.playerHint}>
 				<Text style={styles.emulatorLabel} accessibilityRole="text">
