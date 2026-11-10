@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildSearchUrl, searchGames, getItem, requestJson } from '../src/services/archive.mjs';
-import { createFavoritesQueue, parseGames, parseSession } from '../src/services/storage.mjs';
+import { createLibraryStore, parseGames, parseSession } from '../src/services/storage.mjs';
 
 test('search keeps user text inside title tokens and applies collection, sort and page', () => {
   const url = new URL(buildSearchUrl({ collection: 'internetarcade', query: 'Pac-Man OR collection:secrets', sort: 'title', page: 3 }));
@@ -62,18 +62,18 @@ test('queued favorites keep the last confirmed list across failed writes and ret
   let failing = true;
   let disk = JSON.stringify([{ identifier: 'original', title: 'Original' }]);
   let visible;
-  const queue = createFavoritesQueue(async value => {
+  const queue = createLibraryStore(async value => {
     if (failing) throw Error('storage full');
-    disk = value;
-  }, value => { visible = value; });
-  await queue.restore(async () => disk);
+    disk = JSON.stringify(value.saved);
+  }, value => { visible = value.saved; });
+  await queue.restore(async () => ({ saved: JSON.parse(disk), last: null }));
   const a = { identifier: 'a', title: 'A' };
   const b = { identifier: 'b', title: 'B' };
-  await Promise.all([assert.rejects(queue.update(a)), assert.rejects(queue.update(b))]);
+  await Promise.all([assert.rejects(queue.add(a)), assert.rejects(queue.add(b))]);
   assert.deepEqual(visible, JSON.parse(disk));
   assert.deepEqual(visible.map(item => item.identifier), ['original']);
   failing = false;
-  await Promise.all([queue.update(b, true), queue.update(b, true)]);
+  await Promise.all([queue.add(b), queue.add(b)]);
   assert.deepEqual(visible.map(item => item.identifier), ['b', 'original']);
   assert.deepEqual(visible, JSON.parse(disk));
 });

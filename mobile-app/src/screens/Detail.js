@@ -13,8 +13,9 @@ export default function Detail({ game, navigate, library }) {
   }, [game.identifier, retry]);
   if (state.loading || state.error) return <ScrollView contentContainerStyle={s.content}><StateView kind={state.error ? 'error' : 'loading'} message={state.error} onRetry={state.error ? () => setRetry(v => v + 1) : undefined} /></ScrollView>;
   const data = state.data;
+  const isSaved = library.isSaved(data.identifier);
   return <ScrollView contentContainerStyle={s.content}><Copy style={s.kicker}>{data.year ? `ACERVO / ${data.year}` : 'ACERVO / INTERNET ARCHIVE'}</Copy><GameImage game={data} style={{ width: '100%', aspectRatio: 342 / 220 }} resizeMode="contain" /><Heading size={44}>{data.title.toLocaleUpperCase('pt-BR')}</Heading><Copy style={s.muted}>{[data.creator, data.year].filter(Boolean).join(' · ') || 'Informações não fornecidas pelo acervo.'}</Copy>
-    <Button onPress={() => navigate('player', { game: data })}>JOGAR AGORA</Button><Button secondary disabled={!library.ready} onPress={() => library.toggle(data)}>{library.isSaved(data.identifier) ? 'REMOVER DA MINHA LISTA' : 'SALVAR NA MINHA LISTA'}</Button>
+    <Button onPress={() => navigate('player', { game: data })}>JOGAR AGORA</Button><Button secondary disabled={!library.ready} onPress={() => isSaved ? library.remove(data) : library.add(data)}>{isSaved ? 'REMOVER DA MINHA LISTA' : 'SALVAR NA MINHA LISTA'}</Button>
     {library.error ? <Copy accessibilityRole="alert">{library.error}</Copy> : null}<Heading size={23}>SOBRE O JOGO</Heading><Copy style={s.muted}>{data.description || 'Este item não possui descrição no Internet Archive.'}</Copy>
     {!!data.subjects.length && <View style={{ gap: 8 }}><Heading size={23}>CATEGORIAS</Heading><Copy style={s.caption}>{data.subjects.join(' · ')}</Copy></View>}<Copy style={s.caption}>Fonte: Internet Archive</Copy>
   </ScrollView>;
