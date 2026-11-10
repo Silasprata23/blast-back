@@ -1,21 +1,29 @@
 {
-	"expo": {
-		"name": "Blast Back",
-		"slug": "blast-back",
-		"version": "1.0.0",
-		"orientation": "default",
-		"userInterfaceStyle": "dark",
-		"newArchEnabled": true,
-		"ios": {
-			"supportsTablet": true
-		},
-		"android": {
-			"edgeToEdgeEnabled": true,
-			"softwareKeyboardLayoutMode": "pan"
-		},
-		"web": {
-			"bundler": "metro"
-		},
-		"plugins": ["expo-status-bar"]
-	}
+  "expo": {
+    "name": "Blast Back",
+    "slug": "blast-back",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.anonymous.blastback"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4e7f7d89-e11f-4ecb-a89f-702a3dfee841"
+      }
+    }
+  }
 }
