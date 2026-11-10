@@ -15,14 +15,19 @@ import {
 	PROFILE_IDS,
 	chooseControlProfile,
 } from "../constants/controlProfiles";
+import { sessionEntry } from "../services/storage.mjs";
 import { embed } from "../constants/catalog";
-import { getItem } from "../services/archiveService";
+import { getItem } from "../services/archive.mjs";
 import { makeKeyboardScript } from "../services/keyboardBridge";
 import { styles } from "../styles/styles";
 
 export function PlayerScreen({
 	selectedGame,
 	saveGame,
+	storageReady,
+	storageError,
+	retryStorage,
+	remember,
 	navigate,
 	width,
 	height,
@@ -36,6 +41,10 @@ export function PlayerScreen({
 	const [manualProfile, setManualProfile] = useState(null);
 	const [webReady, setWebReady] = useState(false);
 	const webRef = useRef(null);
+	const [startedAt] = useState(Date.now);
+	const [saving, setSaving] = useState(false);
+	const [feedback, setFeedback] = useState("");
+	const savingRef = useRef(false);
 	const id = selectedGame?.identifier;
 
 	useEffect(() => {
@@ -45,7 +54,7 @@ export function PlayerScreen({
 	useEffect(() => {
 		let active = true;
 		if (!id) return undefined;
-		if (detail?.identifier === id && detail?.emulator) {
+		if (detail?.identifier === id && Array.isArray(detail.collection)) {
 			setEmulatorInfo({
 				status: "ready",
 				emulator: detail.emulator,
@@ -77,6 +86,31 @@ export function PlayerScreen({
 		};
 	}, [id, detail]);
 
+	useEffect(() => {
+		if (!storageReady) return;
+		let active = true;
+		remember(sessionEntry(selectedGame, startedAt, startedAt)).catch(() => {
+			if (active) setFeedback("Não foi possível registrar a abertura do jogo.");
+		});
+		return () => { active = false; };
+	}, [storageReady, selectedGame, startedAt, remember]);
+
+	async function handleSave() {
+		if (!storageReady || savingRef.current) return;
+		savingRef.current = true;
+		setSaving(true);
+		setFeedback("");
+		try {
+			await saveGame(sessionEntry(selectedGame, startedAt));
+			setFeedback("Sessão salva.");
+		} catch {
+			setFeedback("Não foi possível salvar. Toque em Salvar para tentar novamente.");
+		} finally {
+			savingRef.current = false;
+			setSaving(false);
+		}
+	}
+
 	const detected = chooseControlProfile(
 		emulatorInfo.emulator,
 		emulatorInfo.collection,
@@ -92,17 +126,22 @@ export function PlayerScreen({
 		<SafeAreaView style={styles.container}>
 			<StatusBar barStyle="light-content" />
 			<View style={styles.playerTop}>
-				<Pressable onPress={() => navigate("detail")}>
+				<Pressable accessibilityRole="button" onPress={() => navigate("detail")}>
 					<Text style={styles.navActive}>‹ Voltar</Text>
 				</Pressable>
 				<Text numberOfLines={1} style={styles.playerTitle}>
 					{selectedGame.title || selectedGame.identifier}
 				</Text>
-				<Pressable onPress={saveGame} style={styles.saveButton}>
-					<Text style={styles.saveText}>Salvar</Text>
+				<Pressable accessibilityRole="button" disabled={!storageReady || saving} onPress={handleSave} style={[styles.saveButton, (!storageReady || saving) && { opacity: 0.5 }]}>
+					<Text style={styles.saveText}>{saving ? "Salvando…" : "Salvar"}</Text>
 				</Pressable>
 			</View>
+			{feedback ? <Text accessibilityLiveRegion="polite" style={styles.muted}>{feedback}</Text> : null}
+			{!storageReady && storageError ? <Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar salvos" onPress={retryStorage}><Text style={styles.muted}>{storageError} Tentar novamente</Text></Pressable> : null}
 			<View style={styles.webWrap}>
+				{Platform.OS === "web" ? (
+					<iframe title={selectedGame.title || id} src={embed(id)} allowFullScreen style={{ width: "100%", height: "100%", border: 0 }} />
+				) : (
 				<WebView
 					ref={webRef}
 					source={{ uri: embed(id) }}
@@ -111,15 +150,16 @@ export function PlayerScreen({
 					allowsFullscreenVideo
 					allowsInlineMediaPlayback
 					mediaPlaybackRequiresUserAction={false}
-					originWhitelist={["*"]}
+					originWhitelist={["https://*"]}
 					style={styles.webview}
 					startInLoadingState
 					onLoadStart={() => setWebReady(false)}
 					onLoadEnd={() => setWebReady(true)}
 					renderLoading={() => (
-						<ActivityIndicator color="#55f2d0" size="large" />
+						<ActivityIndicator color="#C1CB8D" size="large" />
 					)}
 				/>
+				)}
 			</View>
 			<View style={styles.playerHint}>
 				<Text style={styles.emulatorLabel} accessibilityRole="text">

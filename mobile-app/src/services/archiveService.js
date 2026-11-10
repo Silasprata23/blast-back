@@ -1,5 +1,5 @@
 import { API, SYSTEMS } from "../constants/catalog";
-import { detectEmulator } from "./emulatorService";
+import { detectEmulator } from "./emulatorService.mjs";
 const clean = (value) =>
 	String(value || "")
 		.replace(/<[^>]*>/g, " ")
